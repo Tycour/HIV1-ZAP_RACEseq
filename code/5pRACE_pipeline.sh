@@ -116,18 +116,19 @@ function revFastq() {
 
 function createBAM() {
     minimap2 -ax splice -uf -t "$THREADS" "${REF_GENOME}" reads/"${PREFIX}"_q"${QSCORE}"_forUMI.fastq > alignments/"${PREFIX}"_processed_aln.sam
-    samtools view -bS alignments/"${PREFIX}"_processed_aln.sam | samtools sort -o alignments/"${PREFIX}"_processed_aln_sorted.bam
+    samtools view -bS -F 4 alignments/"${PREFIX}"_processed_aln.sam | samtools sort -o alignments/"${PREFIX}"_processed_aln_sorted.bam # Added -F 4 to remove unmapped reads
 }
 
-function UMIcollapse() {
-    umicollapse bam -i alignments/"${PREFIX}"_processed_aln_sorted.bam \
-    -k "$HAMMINGDIST" \
-    -o alignments/"$PREFIX"_dedup.bam
-}
+#function UMIcollapse() {
+#    umicollapse bam -i alignments/"${PREFIX}"_processed_aln_sorted.bam \
+#    -k "$HAMMINGDIST" \
+#    -o alignments/"$PREFIX"_dedup.bam
+#}
 
+# Change _dedup.bam to _processed_aln_sorted.bam
 function findStarts() {
-    bedtools bamtobed -i alignments/"$PREFIX"_dedup.bam > alignments/"$PREFIX"_dedup.bed
-    awk 'BEGIN {OFS="\t"} {if ($6 == "+") print $1, $2, $2+1; else print $1, $3-1, $3}' alignments/"$PREFIX"_dedup.bed > alignments/"$PREFIX"_5start.bed
+    bedtools bamtobed -i alignments/"$PREFIX"_processed_aln_sorted.bam > alignments/"$PREFIX"_processed_aln_sorted.bed
+    awk 'BEGIN {OFS="\t"} {if ($6 == "+") print $1, $2, $2+1; else print $1, $3-1, $3}' alignments/"$PREFIX"_processed_aln_sorted.bed > alignments/"$PREFIX"_5start.bed
     python /Users/tycour/PycharmProjects/HIV1/venv/data/code/countPlotStarts.py \
     alignments/"$PREFIX"_5start.bed \
     "${GENOME_FASTA}" \
@@ -139,7 +140,7 @@ function findStarts() {
 # Main script execution
 merge_reads
 filter_reads
-quality_control
+#quality_control ## Optional step to QC sequencing results
 process_cDNA_reads
 align_reads
 convert_sort_index_bam
@@ -149,7 +150,7 @@ posReads
 extractUMIs
 revFastq
 createBAM
-UMIcollapse
+#UMIcollapse ## Optional
 findStarts
 
 echo "Script completed. Check output files for results."
